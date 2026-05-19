@@ -5,8 +5,9 @@ struct SuffixArray {
     int domain;
     vector<int> sa, lcp;
 
-    SuffixArray(int domain, const vector<int>& arr): domain(domain), sa(arr.size(), 0), lcp(arr.size(), 0) {
+    SuffixArray(int domain, const vector<int>& arr): domain(domain), sa(arr.size(), 0), lcp(arr.size(), -1) {
         get_sa(arr);
+        get_lcp(arr);
     }
 
     void _radix_sort(vector<array<int, 3>>& arr) {
@@ -67,30 +68,41 @@ struct SuffixArray {
             store.push_back({i, arr[i], ((i + 1) >= arr.size()) ? 0 : arr[i + 1]});
         }
 
-        for (auto p : store) {
-            println("{} {} {}", p[0], p[1], p[2]);
-        }
-        println();
-
         int pow = 1;
         while (1) {
             _radix_sort(store);
-            for (auto p : store) {
-                println("{} {} {}", p[0], p[1], p[2]);
-            }
-            println();
             _compress_rank(store);
             _extend_rank(store, pow);
             if ((1 << pow) >= arr.size()) break;
             pow++;
         }
 
-        for (int i = 0; i < arr.size(); i++) {
+        for (int i = 0; i < store.size(); i++) {
             sa[i] = store[i][0];
         }
+    }
 
-        for (int i = 0; i < arr.size(); i++) cout << i << " ";
-        cout << endl;
+    void get_lcp(const vector<int>& arr) {
+        vector<int> pos_to_idx(sa.size(), 0);
+        for (int i = 0; i < sa.size(); i++) {
+            pos_to_idx[sa[i]] = i;
+        }
+
+        int h = 0;
+        for (int i = 0; i < arr.size(); i++) {
+            if (pos_to_idx[i] == 0) {
+                h = 0;
+                continue;
+            }
+
+            h = max(0, h - 1);
+            int prev = sa[pos_to_idx[i] - 1];
+            while (max(h + i, h + prev) < arr.size() && arr[h + i] == arr[h + prev]) {
+                h++;
+            }
+
+            lcp[pos_to_idx[i]] = h;
+        }
     }
 };
 
@@ -112,4 +124,17 @@ int _compress(vector<int>& arr) {
     }
 
     return cnt;
+}
+
+void test() {
+    vector<int> arr = {2, 2, 3, 2, 2, 1};
+    int d = _compress(arr);
+    SuffixArray sa(d, arr);
+
+    for (int x : sa.sa) cout << x << " "; cout << endl;
+    for (int x : sa.lcp) cout << x << " "; cout << endl;
+}
+
+int main() {
+    test();
 }
