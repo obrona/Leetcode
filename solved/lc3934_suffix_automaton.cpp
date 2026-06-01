@@ -8,10 +8,10 @@ using namespace std;
 
 // let endpos be a set for a substring. It represents the end indices of all occurence of that substring in s
 // eg abb, endpos for b is {1, 2}
-
+ 
 // every node in a suffix automaton corresponds to a set of substrings with the same endpos
 
-// let w be the longest subbstring of the equivalence class. Then every node has a suffix link to another node, 
+// let w be the longest substring of the equivalence class. Then every node has a suffix link to another node, 
 // whose w' is the longest suffix of w with a different equivalence class (which definitely is bigger).
 
 // when transiting to different state, always choose node v with the smallest len(v). We maintain that invariant.
