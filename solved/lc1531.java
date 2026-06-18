@@ -1,6 +1,3 @@
-package leetcode;
-//import java.util.*;
-
 class Solution {
 // state (Char, count, index, k)
 // i.e shortest string compressed, starting from index, with k deletions left, but confirmed have at lest count Char in front

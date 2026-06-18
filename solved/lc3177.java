@@ -1,5 +1,3 @@
-package leetcode;
-
 import java.util.*;
 
 // bottom up dp, and exploit monoticity

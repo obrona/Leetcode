@@ -1,5 +1,3 @@
-package leetcode;
-
 class SegTree {
     int INF = 0xffffffff;
     int[] tree;

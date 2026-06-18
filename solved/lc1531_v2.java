@@ -1,5 +1,3 @@
-package leetcode;
-
 public class lc1531_v2 {
     
     
