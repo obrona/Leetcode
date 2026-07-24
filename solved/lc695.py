@@ -1,5 +1,7 @@
 from itertools import product
 
+# simple dfs
+
 class Solution:
     def maxAreaOfIsland(self, grid: list[list[int]]) -> int:
         R, C = len(grid), len(grid[0])
@@ -30,7 +32,6 @@ class Solution:
             if seen[r][c]:
                 continue
             ans = dfs(r, c)
-            print(r, c, ans)
             best = max(best, ans)
 
         return best
