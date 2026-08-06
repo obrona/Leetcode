@@ -100,6 +100,7 @@ array<tnode*, 3> split(tnode *node, int key) {
     }
 }
 
+// left, right must have no parents.
 tnode* merge(tnode* left, tnode* right) {
     if (!left) return right;
     if (!right) return left;
@@ -110,6 +111,31 @@ tnode* merge(tnode* left, tnode* right) {
     } else {
         set_children(right, merge(left, right->left), right->right);
         return right;
+    }
+}
+
+void erase(tnode*& root, tnode* node) {
+    set_parent(node->left, nullptr);
+    set_parent(node->right, nullptr);
+    tnode* new_node = merge(node->left, node->right);
+    
+    auto p = node->parent;
+    if (p) {
+        if (node->side) {
+            set_children(p, p->left, new_node);
+        } else {
+            set_children(p, new_node, p->right);
+        }
+
+        // need to update all ancestors' sz
+        auto curr = p->parent;
+        while (curr) {
+            curr->sz = 1 + get_sz(curr->left) + get_sz(curr->right);
+            curr = curr->parent;
+        }
+    } else {
+        // node is the root then, since it has no parents.
+        root = new_node;
     }
 }
 
@@ -152,9 +178,9 @@ public:
             d.pop_back();
 
             int idx = get_idx(partner.get());
-            cnt += curr_sz - 2 - idx;
+            cnt += curr_sz - 2 - idx; // -2 because we have already remove the 0-idx node from the treap.
 
-            remove(root, idx);
+            erase(root, partner.get());
             curr_sz -= 2;
         }
 
@@ -162,3 +188,10 @@ public:
 
     }
 };
+
+int main() {
+    Solution sol;
+    string s = "eqvvhtcsaaqtqesvvqch";
+    int ans = sol.minMovesToMakePalindrome(s);
+    cout << ans << endl;
+}
