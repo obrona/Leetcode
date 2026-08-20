@@ -15,6 +15,10 @@ const int MOD = 1e9 + 7;
 // then len is implicit from [start, end]
 // we push down when we touch that node to its left and right children, see the methods for the details.
 
+// small optimisation, we use monotonic stack to get the left and right limit instead of using set<int>.
+// suppose at index i, j the value is the same and i < j.
+// at index i, the right limit is > j, but for index j the left limit is > i.
+
 int norm(long long x) {
     x %= MOD;
     if (x < 0) x += MOD;
@@ -109,6 +113,36 @@ struct segtree {
     }
 };
 
+vector<int> get_left_limit(const vector<int>& strength) {
+    vector<int> out(strength.size());
+    vector<pair<int,int>> arr;
+    for (int i = 0; i < strength.size(); i++) {
+        int s = strength[i];
+        while (!arr.empty() && arr.back().second > s) {
+            arr.pop_back();
+        }
+
+        out[i] = (arr.empty()) ? -1 : arr.back().first;
+        arr.emplace_back(i, s);
+    }
+    return out;
+}
+
+vector<int> get_right_limit(const vector<int>& strength) {
+    vector<int> out(strength.size());
+    vector<pair<int,int>> arr;
+    for (int i = strength.size() - 1; i >= 0; i--) {
+        int s = strength[i];
+        while (!arr.empty() && arr.back().second >= s) {
+            arr.pop_back();
+        }
+
+        out[i] = (arr.empty()) ? strength.size() : arr.back().first;
+        arr.emplace_back(i, s);
+    }
+    return out;
+}
+
 class Solution {
 public:
     int totalStrength(vector<int>& strength) {
@@ -122,23 +156,12 @@ public:
         });
 
         segtree st(len);
-        set<int> used_indexes;
-
-        auto get_left_limit = [&used_indexes] (int i) {
-            auto it = used_indexes.lower_bound(i);
-            if (it == used_indexes.begin()) return -1;
-            else return *(prev(it));
-        };
-
-        auto get_right_limit = [&used_indexes, len] (int i) -> int {
-            auto it = used_indexes.upper_bound(i);
-            if (it == used_indexes.end()) return len;
-            else return *it;
-        };
+        auto left_lims = get_left_limit(strength);
+        auto right_lims = get_right_limit(strength);
 
         for (auto [i, v] : arr) {
-            int left_lim = get_left_limit(i);
-            int right_lim = get_right_limit(i);
+            int left_lim = left_lims[i];
+            int right_lim = right_lims[i];
 
             int a = i - left_lim;
             int b = right_lim - i;
@@ -173,8 +196,6 @@ public:
                     step_right
                 );
             }
-
-            used_indexes.insert(i);
         }
 
         int sum = 0;
