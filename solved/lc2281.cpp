@@ -147,19 +147,13 @@ class Solution {
 public:
     int totalStrength(vector<int>& strength) {
         int len = strength.size();
-        vector<pair<int,int>> arr;
-        for (int i = 0; i < strength.size(); i++) arr.emplace_back(i, strength[i]);
-        sort(arr.begin(), arr.end(), [] (const auto& p1, const auto& p2) {
-            if (p1.second != p2.second) return p1.second < p2.second;
-            if (p1.first != p2.first) return p1.first < p2.first;
-            return false;
-        });
 
         segtree st(len);
         auto left_lims = get_left_limit(strength);
         auto right_lims = get_right_limit(strength);
 
-        for (auto [i, v] : arr) {
+        for (int i = 0; i < len; i++) {
+            int v = strength[i];
             int left_lim = left_lims[i];
             int right_lim = right_lims[i];
 
