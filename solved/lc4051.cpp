@@ -37,6 +37,8 @@ void push_down(node *n) {
 
     if (n->left) f(n->left);
     if (n->right) f(n->right);
+
+    n->to_propogate = 0;
 }
 
 void recombine(node *n, node *left, node *right) {
@@ -65,8 +67,9 @@ array<node*, 3> split(node *n, long long key) {
     push_down(n);
 
     if (n->key == key) {
+        auto left = n->left, right = n->right;
         recombine(n, nullptr, nullptr);
-        return {n->left, n, n->right};
+        return {left, n, right};
     } else if (n->key < key) {
         auto [l, e, r] = split(n->right, key);
         recombine(n, n->left, l);
@@ -98,6 +101,7 @@ void insert(node *&root, long long key) {
     auto [l, e, r] = split(root, key);
     if (e) {
         e->count++;
+        e->weight++;
     } else {
         e = new node(key);
     }
@@ -106,6 +110,8 @@ void insert(node *&root, long long key) {
 
 int count_geq(node *root, long long key) {
     if (!root) return 0;
+
+    push_down(root);
 
     if (root->key == key) {
         return root->count + get_weight(root->right);
@@ -119,6 +125,8 @@ int count_geq(node *root, long long key) {
 int count_leq(node *root, long long key) {
     if (!root) return 0;
 
+    push_down(root);
+
     if (root->key == key) {
         return get_weight(root->left) + root->count;
     } else if (root->key < key) {
@@ -126,4 +134,51 @@ int count_leq(node *root, long long key) {
     } else {
         return count_leq(root->left, key);
     }
+}
+
+int count_eq(node *root, long long key) {
+    if (!root) return 0;
+
+    push_down(root);
+
+    if (root->key == key) {
+        return root->count;
+    } else if (root->key < key) {
+        return count_eq(root->right, key);
+    } else {
+        return count_eq(root->left, key);
+    }
+}
+
+class Solution {
+public:
+    long long distantSubarrays(vector<int>& nums, int goal, int k) {
+        node *root = nullptr;
+        long long cnt = 0;
+
+        for (int i = 0; i < nums.size(); i++) {
+            global_add(root, nums[i]);
+            insert(root, nums[i]);
+
+            cnt += count_leq(root, goal - k);
+            cnt += count_geq(root, goal + k);
+            if (k == 0) {
+                cnt -= count_eq(root, goal);
+            }
+        }
+        cleanup(root);
+
+        return cnt;
+    }
+};
+
+int main() {
+    Solution sol;
+
+    vector<int> nums = {16,26,41,20,-25,18};
+    int goal = -7;
+    int k = 0;
+
+    int ans = sol.distantSubarrays(nums, goal, k);
+    cout << ans << endl;
 }
