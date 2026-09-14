@@ -1,6 +1,4 @@
-.vscode/*
-**/a.out
-test*
-a.exe
-Test*
+.vscode/
+a.out
 .venv/
+__pycache__/
