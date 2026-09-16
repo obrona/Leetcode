@@ -1,206 +1,191 @@
-#include <bits/stdc++.h>
+#include <functional>
+#include <utility>
+#include <vector>
+#include <unordered_map>
+#include <limits>
+#include <memory>
+#include <ext/pb_ds/assoc_container.hpp>
+#include <ext/pb_ds/tree_policy.hpp>
+
 using namespace std;
+using namespace __gnu_pbds;
 
-// want to find how many pairs (i, j)
-// where i < j
-// and nums[i] < nums[j]
-// and for all k in [i + 1, j - 1] (inclusive of both ends), nums[k] <= nums[i] or nums[k] >= nums[j]
 
-// suppose we are processing index i.
-// let j be the earliest right element s.t arr[j] > arr[i].
-// this is 1 valid shadow pair.
-// the next valid shadow pair is at k, the earliest right element from j s.t arr[k] <= arr[j].
-// any element between j ank k is > arr[j], and any element between i and j is <= arr[i].
-// this continues until arr[k'] is <= arr[i].
 
-// the graph form is a DAG.
-// each node has 1 outgoing edge.
-// let dp(j) = how many nodes reachable from index j including j.
-// we want dp(j) - dp(k').
 
-// to find index k', need a data structure that can find earliest right index from index j onwards
-// that is <= arr[i].
-// j here is the earliest right element s.t arr[j] > arr[i].
-// not the same as earliest right index that is <= arr[i] from index i onwards.
-// as that is likely to be the left of j.
-// we need a special segment tree.
-// tree[p] stores the min of range(s, e).
-// when traversing, see the logic in the segment tree to understand the rules.
-// most importantly is to see even though sometimes we traverse on both sides,
-// the time complexity is still O(logn).
- 
-vector<int> earliest_right_g_idx(const vector<int>& arr) {
-    vector<int> out(arr.size(), arr.size());
-    vector<pair<int,int>> store;
+// a difficult problem that requires a new technique called segment tree beats.
+// 1st, we compress the values, however, equal values do not get collapse into the same value.
+// i.e we are sorting (idx, val) then sort increasing val then increasing index.
+// the compress function takes in (idx, val) -> compressed index.
 
-    for (int i = 0; i < arr.size(); i++) {
-        int curr = arr[i];
-        while (store.size() > 0 && store.back().second < curr) {
-            auto [idx, v] = store.back();
-            store.pop_back();
-            out[idx] = i;
-        }
-        store.emplace_back(i, curr);
+// each compressed index stores the ceiling val.
+// for later elems at index j, j can form a shadow pair with i if nums[j] <= seg array[compressed(i, arr[i])]
+// so we need to count how many elements with value >= nums[j].
+// to update we need to do a chmin update
+// i,e seg arr[i] = min(seg arr[i], x)
+// thankfully we are counting the number of elements that are going to be affected by the chmin update.
+// makes the update (and query, contained in the update) to be logn
+
+
+
+
+
+
+pair<function<int(int)>, function<int(int, int)>> compress(const vector<int>& arr) {
+    using Key = pair<int, int>;
+
+    using OrderedSet = tree<
+        Key,
+        null_type,
+        less<Key>,
+        rb_tree_tag,
+        tree_order_statistics_node_update
+    >;
+
+    auto store = make_shared<OrderedSet>();
+
+    for (int i = 0; i < static_cast<int>(arr.size()); ++i) {
+        store->insert({arr[i], i});
     }
 
-    return out;
+    function<int(int)> orderByValue = [store] (int value) {
+        return static_cast<int>(
+            store->order_of_key({value, numeric_limits<int>::min()})
+        );
+    };
+
+    function<int(int, int)> orderByKey = [store] (int value, int index) {
+        return static_cast<int>(store->order_of_key({value, index}));
+    };
+
+    return {orderByValue, orderByKey};
 }
 
-vector<int> earliest_right_leq_idx(const vector<int>& arr) {
-    vector<int> out(arr.size(), arr.size());
-    vector<pair<int,int>> store;
-
-    for (int i = 0; i < arr.size(); i++) {
-        int curr = arr[i];
-        while (store.size() > 0 && store.back().second >= curr) {
-            auto [idx, v] = store.back();
-            store.pop_back();
-            out[idx] = i;
-        }
-        store.emplace_back(i, curr);
-    }
-
-    return out;
-}
 
 struct segtree {
-    const int DEFAULT = int(1e9) + 1;
+    
+    struct node {
+        int max_val = 0;
+        int second_max_val = 0;
+        int max_cnt = 0;
+        int propogate_val = -1;
+
+        int cnt = 0;
+    };
 
     int len;
-    vector<int> tree;
+    vector<node> tree;
 
-    segtree(int len): len(len), tree(4 * len, DEFAULT) {}
+    segtree(int len): len(len), tree(4 * len) {}
 
-    segtree(const vector<int>& arr): len(arr.size()), tree(4 * len, DEFAULT) {
-        build(arr);
+    int left(int p) {
+        return p << 1;
     }
 
-    inline int mid(int s, int e) {
+    int right(int p) {
+        return (p << 1) | 1;
+    }
+
+    int mid(int s, int e) {
         return s + ((e - s) >> 1);
     }
 
-    inline int left(int p) {
-        return (p << 1) + 1;
+    void push_down(int p) {
+        if (tree[p].propogate_val == -1) return;
+        
+        tree[left(p)].max_val = tree[right(p)].max_val = tree[p].max_val;
+        tree[p].propogate_val = -1;
     }
 
-    inline int right(int p) {
-        return (p << 1) + 2;
-    }
+    void pull_up(int p) {
+        int l = left(p), r = right(p);
 
-    int build(const vector<int>& arr, int p = 0, int s = 0, int e = -1) {
-        if (e == - 1) e = len - 1;
-
-        if (s == e) {
-            return tree[p] = arr[s];
+        if (tree[l].max_val == tree[r].max_val) {
+            tree[p].max_val = tree[l].max_val;
+            tree[p].max_cnt = tree[l].max_cnt + tree[r].max_cnt;
+        } else if (tree[l].max_val > tree[r].max_val) {
+            tree[p].max_val = tree[l].max_val;
+            tree[p].max_cnt = tree[r].max_cnt;
+        } else {
+            tree[p].max_val = tree[r].max_cnt;
+            tree[p].max_cnt = tree[r].max_cnt;
         }
 
-        int m = mid(s, e);
-        return tree[p] = min(
-            build(arr, left(p), s, m), 
-            build(arr, right(p), m + 1, e)
-        );
+        tree[p].second_max_val = max(tree[l].second_max_val, tree[r].second_max_val);
 
+        tree[p].cnt = tree[l].cnt + tree[r].cnt;
     }
 
-    int update(int i, int v, int p = 0, int s = 0, int e = -1) {
+    // does chmin and also returns the number of elems whose values changed
+    // if x = arr[i] for min(arr[i], x) we also consider that element changed.
+    int update_and_count(int val, int l, int r, int p = 0, int s = 0, int e = -1) {
         if (e == -1) e = len - 1;
         
-        if (s == e) {
-            return tree[p] = v;
+        if (r < s || l > e) {
+            return 0;
         }
+
+        if (l <= s && e <= r) {
+            if (tree[p].max_val < val) {
+                return 0;
+            } else if (tree[p].second_max_val < val) {
+                tree[p].propogate_val = (tree[p].propogate_val == -1) ? val : min(tree[p].propogate_val, val);
+                tree[p].max_val = val;
+                return tree[p].max_cnt;
+            }
+        }
+        
+        push_down(p);
+
+        int m = mid(s, e);
+        int lres = update_and_count(val, l, m, left(p), s, m);
+        int rres = update_and_count(val, m + 1, r, right(p), m + 1, e);
+
+        pull_up(p);
+
+        return lres + rres;
+    }
+
+    void set(int i, int val, int p = 0, int s = 0, int e = -1) {
+        if (e == -1) e = len - 1;
+
+        if (s == e) {
+            tree[p].max_val = val;
+            tree[p].second_max_val = 0;
+            tree[p].max_cnt = tree[p].cnt = 1;
+        }
+
+        push_down(p);
 
         int m = mid(s, e);
         if (i <= m) {
-            return tree[p] = min(update(i, v, left(p), s, m), tree[right(p)]);
+            set(i, val, left(p), s, m);
         } else {
-            return tree[p] = min(tree[left(p)], update(i, v, right(p), m + 1, e));
-        }
-    }
-
-    pair<int,int> query(int l, int r, int key, int p = 0, int s = 0, int e = -1) {
-        if (e == -1) e = len - 1;
-
-        if (s == l && e == r && tree[p] > key) {
-            return {r + 1, DEFAULT};
+            set(i, val, right(p), m + 1, e);
         }
 
-        if (s == e) {
-            if (tree[p] <= key) {
-                return {s, tree[p]};
-            } else {
-                return {r + 1, DEFAULT};
-            }
-        }
-
-        int m = mid(s, e);
-        if (r <= m) {
-            return query(l, r, key, left(p), s, m);
-        } else if (l > m) {
-            return query(l, r, key, right(p), m + 1, e);
-        } else {
-            auto res = query(l, m, key, left(p), s, m);
-            if (res.second < DEFAULT) {
-                return res;
-            } else {
-                return query(m + 1, r, key, right(p), m + 1, e);
-            }
-        }
+        pull_up(p);
     }
 };
-
-// given a functional acyclic graph i.e each vertex has <= 1 outgoing edge,
-// find the number of vertices reachable from vertex i.
-vector<int> solve_dp(const vector<int> arr) {
-    vector<int> out(arr.size(), -1);
-
-    function<int(int)> dp = [&] (int i) {
-        if (i < 0 || i >= arr.size()) {
-            return 0;
-        }
-        
-        int& ans = out[i];
-        return (ans != -1) ? ans : ans = 1 + dp(arr[i]);
-    };
-
-    for (int i = 0; i < arr.size(); i++) {
-        out[i] = dp(i);
-    }
-
-    return out;
-}
 
 class Solution {
 public:
     int shadowPairs(vector<int>& nums) {
-        int cnt = 0;
-
-        auto earliest_leq = earliest_right_leq_idx(nums);
-        auto earliest_g = earliest_right_g_idx(nums);
-
-        segtree st(nums);
-
-        auto dp_res = solve_dp(earliest_leq);
-
-        for (int i = 0; i < nums.size(); i++) {
-            int j = earliest_g[i];
-            if (j == nums.size()) continue;
-
-            auto [k, val] = st.query(j, nums.size() - 1, nums[i]);
-
-            int ans = dp_res[j] - (k >= nums.size() ? 0 : dp_res[k]);
-            cnt += ans;
-        }
+        segtree st(nums.size());
+        auto [compressed_by_val, compressed_by_value_and_index] = compress(nums);
         
+        int cnt = 0;
+        for (int i = 0; i < nums.size(); i++) {
+            int limit = compressed_by_val(nums[i]);
+            if (limit != 0) {
+                int res = st.update_and_count(nums[i], 0, limit - 1);
+                cnt += res;
+            }
+
+            int pos = compressed_by_value_and_index(nums[i], i);
+            st.set(pos, int(1e9) + 1);
+        }
+
         return cnt;
     }
 };
-
-int main() {
-    Solution sol;
-    
-    vector<int> nums = {11,18,11,18};
-
-    int ans = sol.shadowPairs(nums);
-    cout << ans << endl;
-}
-
