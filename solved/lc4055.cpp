@@ -4,6 +4,7 @@
 #include <vector>
 #include <limits>
 #include <memory>
+#include <iostream>
 #include <ext/pb_ds/assoc_container.hpp>
 #include <ext/pb_ds/tree_policy.hpp>
 
@@ -121,14 +122,14 @@ struct segtree {
     int len;
     vector<node> tree;
 
-    segtree(int len): len(len), tree(4 * len + 5) {}
+    segtree(int len): len(len), tree(4 * len) {}
 
     int left(int p) {
-        return p << 1;
+        return (p << 1) + 1;
     }
 
     int right(int p) {
-        return (p << 1) | 1;
+        return (p << 1) + 2;
     }
 
     int mid(int s, int e) {
@@ -172,35 +173,37 @@ struct segtree {
     // val <= max_val, only the maximum-valued leaves qualify, so max_cnt is the
     // answer and only max_val needs to be capped. Otherwise, more than one
     // distinct ceiling may qualify, so recurse into the children.
-    int update_and_count(int val, int l, int r, int p = 1, int s = 0, int e = -1) {
+    int update_and_count(int val, int l, int r, int p = 0, int s = 0, int e = -1) {
         if (e == -1) e = len - 1;
         
-        if (r < s || l > e) {
-            return 0;
-        }
-
-        if (l <= s && e <= r) {
-            if (tree[p].max_val < val) {
+        if (s == l && e == r) {
+            if (tree[p].max_val < val){
                 return 0;
             } else if (tree[p].second_max_val < val) {
-                int changed = tree[p].max_cnt;
-                apply_chmin(p, val);
-                return changed;
+                tree[p].max_val = val;
+                return tree[p].max_cnt;
             }
         }
-        
+
         push_down(p);
 
         int m = mid(s, e);
-        int lres = update_and_count(val, l, r, left(p), s, m);
-        int rres = update_and_count(val, l, r, right(p), m + 1, e);
+        int ans;
+        if (r <= m) {
+            ans = update_and_count(val, l, r, left(p), s, m);
+        } else if (l > m) {
+            ans = update_and_count(val, l, r, right(p), m + 1, e);
+        } else {
+            ans = update_and_count(val, l, m, left(p), s, m)
+                + update_and_count(val, m + 1, r, right(p), m + 1, e);
+        }
 
         pull_up(p);
 
-        return lres + rres;
+        return ans;
     }
 
-    void set(int i, int val, int p = 1, int s = 0, int e = -1) {
+    void set(int i, int val, int p = 0, int s = 0, int e = -1) {
         if (e == -1) e = len - 1;
 
         if (s == e) {
@@ -246,3 +249,12 @@ public:
         return cnt;
     }
 };
+
+int main() {
+    Solution sol;
+
+    vector<int> nums = {3,1,4,2,5};
+
+    int ans = sol.shadowPairs(nums);
+    cout << ans << endl;
+}
