@@ -173,6 +173,26 @@ struct segtree {
     // val <= max_val, only the maximum-valued leaves qualify, so max_cnt is the
     // answer and only max_val needs to be capped. Otherwise, more than one
     // distinct ceiling may qualify, so recurse into the children.
+    //
+    // Why this is amortized O(log n) in this problem:
+    // Let the potential be the sum, over all tree nodes, of the number of
+    // distinct ceiling values in that node's segment. A single call can take
+    // more than O(log n), but every extra recursion into a fully covered node
+    // happens only when val <= second_max_val < max_val. After chmin(val), the
+    // old maximum and second maximum merge, so that node's potential decreases
+    // by at least one. Charge the extra recursive work to this decrease.
+    //
+    // Potential can be created only along O(log n) paths per operation:
+    //   1. set() changes the nodes on one root-to-leaf path, adding at most one
+    //      distinct value per node;
+    //   2. update_and_count() updates a prefix, so only one node per tree level
+    //      is partially covered. At such a boundary node, val may become a new
+    //      distinct value while the old value survives outside the prefix.
+    // Fully covered O(1) updates merely replace one maximum value and do not
+    // increase the number of distinct values. Therefore each operation creates
+    // only O(log n) potential, which bounds all later extra recursion. Across n
+    // sets and n prefix chmins the total work is O(n log n), i.e. amortized
+    // O(log n) per operation (although one individual chmin may be slower).
     int update_and_count(int val, int l, int r, int p = 0, int s = 0, int e = -1) {
         if (e == -1) e = len - 1;
         
