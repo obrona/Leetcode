@@ -31,14 +31,27 @@ def parse(s: str, l: int, r: int, braces: dict[int,int]) -> int:
             
     return score
 
+def single_pass_parse(s: str, i: int) -> tuple[int,int]:
+    score = 0
+    while i < len(s):
+        if s[i] == ')':
+            return (1 if score == 0 else score, i + 1)
+        elif s[i]  == '(':
+            if s[i + 1] == ')':
+                score += 1
+                i += 2
+            else:
+                wish, next = single_pass_parse(s, i + 1)
+                score += 2 * wish
+                i = next
+    return score
+
 class Solution:
     def scoreOfParentheses(self, s: str) -> int:
-        braces = match_braces(s)
-        res = parse(s, 0, len(s) - 1, braces)
-        return res
+        return single_pass_parse(s, 0)
 
 sol = Solution()
-s = '(())()'
+s = '((()))'
 print(sol.scoreOfParentheses(s))
                 
                 
