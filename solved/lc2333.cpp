@@ -22,7 +22,7 @@ public:
         int p = store.size() - 1;
         int curr = store.back();
 
-        while (ops > 0) {
+        while (ops >= 0) {
             while (p > -1 && store[p] == curr) p--;
             
             int next = (p == -1) ? 0 : store[p];
@@ -47,14 +47,9 @@ public:
 
                 return temp;
             }
-        }     
-
-        long long ans = 0;
-        ans += (store.size() - 1 - p) * pow((long long) curr, 2);
-        for (int i = p; i > -1; i--) {
-            ans += pow((long long) store[i], 2);
-        }
-        return ans;
+        } 
+        
+        return 0;
     }
 };
 
