@@ -1,21 +1,44 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-// process from smallest element to largest element.
-// if there are multiple smallest element process from left to right.
-// suppose smallest element x is at pos i.
-// want to find all subarray that contain index i and where the minimum element is x
-// and also the AND of all elems in that subarray is x.
-// find the 1st element to the left where y & x < x, at pos a
-// this is the same as finding 1st idx to the left where nums[yi] & nums[yi + 1] ... & nums[x] < x
-// find 1st element to the right where z & x < x, eg at pos b
-// this is the same as finding 1st idx to the right where nums[x] & nums[x + 1] ...  nums[zi] < x
-// the ans is (i - a) * (b - i).
-
-// for subsequent elems, we need to find
-// to the left, the 1st elem <= x
-// to the right the 1st elem < x.
-// use monotonic stack for this
+// Solution description
+// --------------------
+// Idea: count every consistent subarray exactly once, at the index of its
+// leftmost minimum.
+//
+// Fix index i with x = nums[i], and count subarrays [l..r] (l <= i <= r) where
+//   (1) nums[i] is the leftmost minimum of [l..r], and
+//   (2) AND(nums[l..r]) == x.
+//
+// Condition (1) -- monotonic stacks:
+//   - left_lteq[i]: 1st index to the left with value <= x (or -1).
+//     Using <= on the left means no element equal to x lies left of i, so i
+//     is the *leftmost* minimum and ties are not double counted.
+//   - right_lt[i]: 1st index to the right with value < x (or n).
+//     Equal values are allowed on the right.
+//
+// Condition (2) -- segment tree of ANDs:
+//   The AND of any range containing i is a submask of x, so AND == x iff
+//   every element of the range contains all bits of x. That makes the left
+//   and right sides independent: AND(l..r) == x iff AND(l..i) == x and
+//   AND(i..r) == x. Both of these can only shrink as the range grows, so
+//   each side has a boundary:
+//   - query_left(i, x): walk left from i, find the 1st index where the
+//     running AND drops below x. If it never drops, the boundary is -1.
+//   - query_right(i, x): walk right from i, find the 1st index where the
+//     running AND drops below x. If it never drops, the boundary is n.
+//   Each query goes down the segment tree, keeps a running AND (accu), and
+//   skips any fully covered node that keeps accu >= x. That is O(log n).
+//
+// Combine:
+//   L = max(left_lteq[i], AND boundary on the left)    (exclusive)
+//   R = min(right_lt[i],  AND boundary on the right)   (exclusive)
+//   l has (i - L) choices and r has (R - i) choices, independently, so
+//   ans += (i - L) * (R - i).
+//
+// Complexity: O(n log n) time, O(n) space.
+// (The indices are handled in sorted order, but each one is computed
+// independently, so the order does not change the result.)
 
 
 vector<int> get_left_lteq(const vector<int>& arr) {
